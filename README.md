@@ -2,6 +2,10 @@
 
 根据用户的复习目标与文档，提炼可以编辑、核对出处和打印的复习速查表。
 
+网页入口：[GitHub Pages](https://dns0129.github.io/Make_Your_CheatSheet/)。GitHub Pages 版提供原文提炼、资料上传、编辑和导出，所有资料在浏览器内处理。
+
+[Pi 云端版](https://sheetwise-study.dennis20070129.chatgpt.site)提供服务端 Pi 生成接口，需要站点拥有者登录以及完成 GPT 订阅授权。当前订阅 OAuth 换票尚未完成，AI 生成暂未启用。
+
 ## 第一版功能
 
 - 添加文字版 PDF、DOCX、TXT、Markdown，或直接粘贴学习资料。
@@ -59,6 +63,18 @@ node --check dist/parser.mjs
 解析器版本固定为 pdfjs-dist 4.10.38 与 mammoth 1.11.0。第三方许可证位于 `dist/vendor/`。
 
 ## 云端托管
+
+### GitHub Pages
+
+`.github/workflows/pages.yml` 在推送 `main` 时运行测试、打包静态网页并部署到 Pages。首次启用需在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
+
+```bash
+npm run build:pages
+```
+
+产物位于 `.sites-runtime/pages/`。仅浏览器资源会发布，Node/Worker 代码与账户凭据不进入 Pages 产物。Pages 使用项目子目录，所有解析器与模块使用相对资源路径。Pi 选项在 Pages 中禁用，并提供云端版入口。
+
+### Sites Worker
 
 `.openai/hosting.json` 记录原站点 ID 和 `BUCKET` 绑定。`npm run build` 将界面、解析器、Pi Agent 和 Pi OpenAI provider 打包成 Sites Worker；访问保留原私有权限。站点源码与部署包保持同一提交。`server/` 是用于账户授权和本地开发的 Pi Coding Agent SDK 服务，线上使用 Pi Agent Core。
 

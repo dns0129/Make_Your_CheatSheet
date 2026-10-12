@@ -37,6 +37,23 @@ function updateMode() {
   if (!state.busy) $('generate-button').textContent = ai ? '✳ 用 Pi 智能整理 →' : '✳ 生成我的 Cheatsheet →';
 }
 async function refreshPi() {
+  if (window.SHEETWISE_STATIC_SITE) {
+    state.piConnected = false;
+    $('pi-option').disabled = true;
+    $('pi-option').textContent = 'Pi 智能整理 · 请打开云端版';
+    $('pi-status').textContent = 'GitHub Pages · 原文提炼';
+    $('generation-mode').value = 'extractive';
+    $('refresh-pi').hidden = true;
+    if (!$('pi-cloud-link')) {
+      const link = create('a', 'text-button', 'Pi 云端版 ↗');
+      link.id = 'pi-cloud-link';
+      link.href = 'https://sheetwise-study.dennis20070129.chatgpt.site';
+      link.target = '_blank'; link.rel = 'noopener';
+      $('refresh-pi').after(link);
+    }
+    updateMode();
+    return;
+  }
   if (!window.fetch) { $('pi-status').textContent = '当前预览未连接 Pi 服务'; return; }
   try {
     const response = await window.fetch('/api/pi/status', { cache: 'no-store' });

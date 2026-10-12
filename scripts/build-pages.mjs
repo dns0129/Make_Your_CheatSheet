@@ -1,0 +1,14 @@
+import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
+const output = resolve('.sites-runtime/pages');
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await cp('dist', output, { recursive: true });
+const indexPath = resolve(output, 'index.html');
+let html = await readFile(indexPath, 'utf8');
+html = html.replace('<script type="module" src="./app.mjs"></script>', '<script src="./pages-config.js"></script>\n  <script type="module" src="./app.mjs"></script>');
+html = html.replace('第一版 · 文档提炼', 'GitHub Pages · 文档提炼');
+await writeFile(indexPath, html);
+await writeFile(resolve(output, 'pages-config.js'), 'window.SHEETWISE_STATIC_SITE = true;\n');
+await writeFile(resolve(output, '.nojekyll'), '');
+console.log('GitHub Pages static site prepared in .sites-runtime/pages.');

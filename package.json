@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node --use-env-proxy server/index.mjs",
     "build": "node scripts/build-worker.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
     "pi:login": "node --use-env-proxy scripts/pi-login.mjs",
     "pi:status": "node scripts/pi-status.mjs",
     "test": "node --test --test-isolation=none tests/*.test.mjs",
