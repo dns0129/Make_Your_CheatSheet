@@ -3,7 +3,7 @@ import { parseFile } from './parser.mjs';
 import { sampleDocuments } from './sample.mjs';
 
 const $ = id => document.getElementById(id);
-const state = { documents: [], sheet: null, busy: false, stale: false, editing: null };
+const state = { documents: [], sheet: null, busy: false, stale: false, editing: null, piConnected: false, aiController: null };
 let toastTimer;
 const create = (tag, className, text) => {
   const element = document.createElement(tag);
@@ -31,6 +31,28 @@ function options() {
     categories: form.getAll('category'), columns: $('columns').value,
   };
 }
+function updateMode() {
+  const ai = $('generation-mode').value === 'pi-ai';
+  $('processing-note').textContent = ai ? 'AI 生成会将所选资料发送给 GPT，使用你的订阅额度' : '原文提炼在本机处理，不上传文档';
+  if (!state.busy) $('generate-button').textContent = ai ? '✳ 用 Pi 智能整理 →' : '✳ 生成我的 Cheatsheet →';
+}
+async function refreshPi() {
+  if (!window.fetch) { $('pi-status').textContent = '当前预览未连接 Pi 服务'; return; }
+  try {
+    const response = await window.fetch('/api/pi/status', { cache: 'no-store' });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('unavailable');
+    const status = await response.json();
+    state.piConnected = status.connected === true && status.modelAvailable === true && status.model === 'gpt-6.1-sol' && status.thinkingLevel === 'medium';
+    $('pi-option').disabled = !state.piConnected;
+    $('pi-status').textContent = state.piConnected ? 'GPT 6.1 Sol · medium · 订阅已连接' : 'GPT 订阅待授权 · gpt-6.1-sol / medium';
+    if (state.piConnected && !state.sheet) $('generation-mode').value = 'pi-ai';
+    if (!state.piConnected) $('generation-mode').value = 'extractive';
+  } catch {
+    state.piConnected = false; $('pi-option').disabled = true;
+    $('pi-status').textContent = '当前站点未连接 Pi 服务'; $('generation-mode').value = 'extractive';
+  }
+  updateMode();
+}
 function setBusy(value) {
   state.busy = value;
   $('generate-button').disabled = value;
@@ -39,6 +61,9 @@ function setBusy(value) {
   $('sample-button').disabled = value;
   $('empty-sample')?.toggleAttribute('disabled', value);
   $('generate-button').textContent = value ? '正在读取资料…' : '✳ 生成我的 Cheatsheet →';
+  $('refresh-pi').disabled = value;
+  $('generation-mode').disabled = value;
+  if (!value) { $('cancel-ai').hidden = true; updateMode(); }
   document.querySelectorAll('.doc-remove').forEach(x => { x.disabled = value; });
 }
 function renderDocuments() {
@@ -95,6 +120,7 @@ function renderMessages() {
 function showSources(item) {
   const content = $('source-content'); content.replaceChildren();
   if (item.edited) content.append(create('p', 'sheet-message', '该条目已手动编辑，以下为原始引用内容。'));
+  else if (item.rewritten) content.append(create('p', 'sheet-message', '该条目由 Pi 归纳整理，以下为引用的原文。请核对公式与适用条件。'));
   for (const source of item.sources) {
     const entry = create('section', 'source-entry');
     entry.append(create('h3', '', sourceLabel(source)), create('blockquote', '', source.quote));
@@ -165,12 +191,12 @@ function renderSheet() {
   }
   if (!sheet.items.length) body.append(create('p', 'card-body', '所有条目已移除，可以重新生成。'));
   const footer = create('div', 'sheet-footer');
-  footer.append(create('span', 'wordmark', 'sheetwise'), create('span', '', `文档提炼 · ${sheet.documentNames.length} 份资料 · 公式与条件请核验`));
+  footer.append(create('span', 'wordmark', 'sheetwise'), create('span', '', `${sheet.mode === 'pi-ai' ? 'Pi · GPT 6.1 Sol · medium' : '文档提炼'} · ${sheet.documentNames.length} 份资料 · 公式与条件请核验`));
   paper.append(header, body, footer);
   $('preview-status').textContent = state.stale ? '需求或资料已修改 · 当前显示上次结果，请重新生成' : `${sheet.documentNames.length} 份资料 · ${sheet.items.length} 个重点 · 原文出处可核对`;
   renderMessages();
 }
-function generate() {
+async function generate() {
   if (state.busy) return;
   if (state.editing && !confirm('重新生成会放弃未保存的编辑，继续生成？')) return;
   if (state.sheet?.items.some(x => x.edited) && !confirm('重新生成会替换已手动编辑的内容，继续生成？')) return;
@@ -178,15 +204,31 @@ function generate() {
   if (!opts.categories.length) { toast('请至少选择一种内容类型。', true); return; }
   if (opts.scope === 'focused' && !opts.keywords.trim()) { toast('只保留重点时，请填写至少一个关键词。', true); $('keywords').focus(); return; }
   try {
-    state.sheet = generateSheet(state.documents, opts);
-    state.stale = false; state.editing = null; renderSheet();
+    if ($('generation-mode').value === 'pi-ai') {
+      if (!state.piConnected) { toast('请先连接 GPT 订阅。', true); return; }
+      const snapshot = JSON.stringify({ options: opts, documents: state.documents });
+      state.aiController = new AbortController();
+      setBusy(true); $('generate-button').textContent = 'Pi 正在智能整理…'; $('cancel-ai').hidden = false;
+      const response = await window.fetch('/api/pi/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: snapshot, signal: state.aiController.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error?.message || 'Pi 生成失败，请重试。');
+      if (!validDraft(result.sheet)) throw new Error('Pi 返回的速查表格式不正确。');
+      state.sheet = result.sheet;
+      state.stale = snapshot !== JSON.stringify({ options: options(), documents: state.documents });
+    } else { state.sheet = generateSheet(state.documents, opts); state.stale = false; }
+    state.editing = null; renderSheet();
     toast(`已整理 ${state.sheet.items.length} 个重点，记得核对原文。`);
-  } catch (error) { toast(error.message, true); }
+  } catch (error) { toast(error.name === 'AbortError' ? 'AI 生成已取消。' : error.message, error.name !== 'AbortError'); }
+  finally { state.aiController = null; if (state.busy) setBusy(false); }
 }
 function loadSample() {
   if (state.busy) return;
   if ((state.documents.some(x => !x.sample) || state.sheet?.items.some(x => x.edited)) && !confirm('试用示例将替换当前资料与结果。需要保留结果时，请先保存到本机。继续？')) return;
   state.documents = structuredClone(sampleDocuments);
+  $('generation-mode').value = 'extractive'; updateMode();
   state.sheet = null; state.stale = false; state.editing = null;
   $('sheet-title').value = '概率论 · 考前速查';
   $('requirements').value = '准备期末考试，重点复习条件概率与贝叶斯公式，保留使用条件和易错提醒。';
@@ -219,6 +261,9 @@ function validDraft(value) {
 }
 $('settings-form').addEventListener('submit', event => { event.preventDefault(); generate(); });
 $('settings-form').addEventListener('input', markStale);
+$('generation-mode').addEventListener('change', updateMode);
+$('refresh-pi').addEventListener('click', refreshPi);
+$('cancel-ai').addEventListener('click', () => state.aiController?.abort());
 $('file-input').addEventListener('change', event => addFiles([...event.target.files]));
 $('dropzone').addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (!state.busy) $('file-input').click(); } });
 for (const name of ['dragenter', 'dragover']) $('dropzone').addEventListener(name, event => { event.preventDefault(); $('dropzone').classList.add('dragging'); });
@@ -279,3 +324,4 @@ $('close-help').addEventListener('click', () => $('help-dialog').close());
 $('close-source').addEventListener('click', () => $('source-dialog').close());
 for (const id of ['source-dialog', 'help-dialog']) $(id).addEventListener('click', event => { if (event.target === $(id)) { const r = $(id).getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) $(id).close(); } });
 renderDocuments();
+refreshPi();

@@ -4,14 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node --use-env-proxy server/index.mjs",
+    "build": "node scripts/build-worker.mjs",
+    "pi:login": "node --use-env-proxy scripts/pi-login.mjs",
+    "pi:status": "node scripts/pi-status.mjs",
     "test": "node --test --test-isolation=none tests/*.test.mjs",
     "vendor": "node scripts/vendor.mjs"
   },
+  "engines": {
+    "node": ">=24.5.0"
+  },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "1.1.0",
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-coding-agent": "1.1.0",
     "mammoth": "1.11.0",
     "pdfjs-dist": "4.10.38"
   },
   "devDependencies": {
+    "esbuild": "0.27.4",
     "jsdom": "26.1.0"
   }
 }

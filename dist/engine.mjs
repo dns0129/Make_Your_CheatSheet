@@ -146,7 +146,8 @@ export function generateSheet(documents, options) {
 }
 
 export function toMarkdown(sheet) {
-  const lines = [`# ${sheet.title}`, '', `> 文档提炼版 · ${sheet.items.length} 个重点 · 修改过的条目请对照原文核验`, ''];
+  const method = sheet.mode === 'pi-ai' ? 'Pi 智能整理 · GPT 6.1 Sol · medium' : '文档提炼版';
+  const lines = [`# ${sheet.title}`, '', `> ${method} · ${sheet.items.length} 个重点 · 内容与公式请对照原文核验`, ''];
   if (sheet.requirements) lines.push(`复习目标：${sheet.requirements}`, '');
   for (const cat of CATEGORIES) {
     const items = sheet.items.filter(x => x.category === cat.id);

@@ -8,6 +8,7 @@
   <title>Sheetwise · 把资料变成重点</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23244d3b'/%3E%3Cpath d='M19 16h20l8 8v25H19z' fill='%23f6f3e9'/%3E%3Cpath d='M25 29h15M25 36h15M25 43h9' stroke='%23244d3b' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./pi.css">
   <script defer src="./vendor/mammoth.browser.min.js"></script>
   <script type="module" src="./app.mjs"></script>
 </head>
@@ -45,8 +46,12 @@
             <label><input type="radio" name="density" value="standard" checked><span>标准</span></label>
             <label><input type="radio" name="density" value="detailed"><span>详细</span></label>
           </div></fieldset>
+          <label class="field-label" for="generation-mode">生成方式</label>
+          <select id="generation-mode" name="mode"><option value="extractive">原文提炼 · 本机处理</option><option value="pi-ai" id="pi-option" disabled>Pi 智能整理 · GPT 6.1 Sol</option></select>
+          <div class="pi-connection"><span id="pi-status">正在检查 Pi 连接…</span><button type="button" id="refresh-pi" class="text-button">刷新</button></div>
           <button class="generate-button" id="generate-button" type="submit"><span aria-hidden="true">✳</span> 生成我的 Cheatsheet <span aria-hidden="true">→</span></button>
-          <p class="local-note"><span aria-hidden="true">⌁</span> 文档在浏览器内处理，不上传到服务器</p>
+          <button type="button" id="cancel-ai" class="small-button" hidden>取消生成</button>
+          <p class="local-note" id="processing-note"><span aria-hidden="true">⌁</span> 原文提炼在本机处理，不上传文档</p>
         </form>
       </aside>
       <div class="main-panel">
@@ -77,6 +82,6 @@
   </main>
   <div class="toast" id="toast" role="status" hidden></div>
   <dialog id="source-dialog"><div class="dialog-top"><h2>核对原文出处</h2><button class="icon-button" id="close-source" aria-label="关闭出处">×</button></div><div id="source-content"></div><p class="dialog-note">已编辑的条目可能与原文不同。PDF 行号指提取后的文本行，页码为原文件页码。</p></dialog>
-  <dialog id="help-dialog"><div class="dialog-top"><h2>三步，整理出你的重点</h2><button class="icon-button" id="close-help" aria-label="关闭使用说明">×</button></div><ol class="help-steps"><li><strong>填写复习目标</strong><p>写下考试范围、薄弱点和想保留的内容。需要严格限定范围时，填写关键词并选择“只保留匹配关键词”。</p></li><li><strong>添加学习资料</strong><p>支持文字版 PDF、DOCX、TXT、Markdown，也可以粘贴文字。扫描文件需要先 OCR；图片、表格结构与复杂公式暂不完整支持。</p></li><li><strong>生成、核验、带走</strong><p>按内容类型与目标提炼原文。点击出处查看原句，可编辑或删除条目。导出 Markdown，或通过打印对话框另存为 PDF。</p></li></ol><div class="help-note"><strong>关于第一版</strong><p>使用原文提取、关键词排序与规则分类，没有接入 AI 改写。不会生成资料之外的知识点。请在考试前核对公式和使用条件。</p></div><p class="dialog-note">文件只在当前浏览器处理。点击“保存到本机”会保存生成结果和引用原句；原始文件不会保存。</p></dialog>
+  <dialog id="help-dialog"><div class="dialog-top"><h2>三步，整理出你的重点</h2><button class="icon-button" id="close-help" aria-label="关闭使用说明">×</button></div><ol class="help-steps"><li><strong>填写复习目标</strong><p>写下考试范围、薄弱点和想保留的内容。需要严格限定范围时，填写关键词并选择“只保留匹配关键词”。</p></li><li><strong>添加学习资料</strong><p>支持文字版 PDF、DOCX、TXT、Markdown，也可以粘贴文字。扫描文件需要先 OCR；图片、表格结构与复杂公式暂不完整支持。</p></li><li><strong>生成、核验、带走</strong><p>按内容类型与目标提炼原文。点击出处查看原句，可编辑或删除条目。导出 Markdown，或通过打印对话框另存为 PDF。</p></li></ol><div class="help-note"><strong>关于第一版</strong><p>原文提炼使用关键词与规则整理。Pi 智能整理使用 GPT 6.1 Sol、medium 推理，消耗已连接账户的 GPT 订阅额度。AI 生成会把资料发送给 GPT，结果附带引用原文；请核对公式与使用条件。</p></div><p class="dialog-note">原文提炼在浏览器内完成；AI 模式将资料发送到服务端与 GPT，服务不会保存学习文档或生成结果。点击“保存到本机”会保存结果与引用原句。</p></dialog>
 </body>
 </html>
