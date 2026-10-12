@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#244d3b">
+  <meta name="description" content="根据你的复习目标和学习资料，提炼可编辑、有出处的考试 Cheatsheet。">
+  <title>Sheetwise · 把资料变成重点</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23244d3b'/%3E%3Cpath d='M19 16h20l8 8v25H19z' fill='%23f6f3e9'/%3E%3Cpath d='M25 29h15M25 36h15M25 43h9' stroke='%23244d3b' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./vendor/mammoth.browser.min.js"></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Sheetwise 首页"><span class="brand-icon" aria-hidden="true">▤</span><span>sheetwise<span class="brand-sub">学习速记</span></span></a>
+    <div class="header-right"><span class="version"><i></i> 第一版 · 文档提炼</span><button class="text-button" id="sample-button">试用示例 <span aria-hidden="true">↗</span></button><button class="text-button" id="help-button" aria-label="使用说明">使用说明</button></div>
+  </header>
+  <main class="workspace">
+    <section class="intro">
+      <div><p class="eyebrow">LESS SCROLLING. MORE LEARNING.</p><h1>把整本资料，变成一张<span>重点。</span></h1><p class="intro-description">带上你的学习资料和复习目标，让知识点、公式与易错点各就其位。</p></div>
+      <div class="intro-note"><span class="note-star" aria-hidden="true">✳</span><span>你负责理解<br><strong>我们帮你整理</strong></span></div>
+    </section>
+    <div class="studio">
+      <aside class="settings-panel">
+        <div class="panel-heading"><span class="step-number">01</span><h2>定义你的复习目标</h2></div>
+        <form id="settings-form">
+          <label class="field-label" for="sheet-title">Cheatsheet 名称</label>
+          <input id="sheet-title" name="title" maxlength="100" placeholder="例如：概率论 · 考前速查">
+          <label class="field-label" for="requirements">这次想掌握什么？</label>
+          <textarea id="requirements" name="requirements" rows="4" maxlength="2000" placeholder="例如：准备期末考试，重点复习条件概率和贝叶斯公式，保留使用条件和易错提醒。"></textarea>
+          <label class="field-label" for="keywords">重点关键词 <span class="optional">可选</span></label>
+          <input id="keywords" name="keywords" maxlength="400" placeholder="条件概率，贝叶斯，方差">
+          <p class="field-hint">多个重点用逗号分隔，匹配条目会优先保留。</p>
+          <label class="field-label" for="scope">资料范围</label>
+          <select id="scope" name="scope"><option value="all">覆盖全部资料，优先保留重点</option><option value="focused">只保留匹配关键词的内容</option></select>
+          <fieldset class="types"><legend class="field-label">我需要这些内容</legend>
+            <label><input type="checkbox" name="category" value="concept" checked><span>◈ 核心知识</span></label>
+            <label><input type="checkbox" name="category" value="formula" checked><span>ƒ 公式与定理</span></label>
+            <label><input type="checkbox" name="category" value="steps" checked><span>↗ 解题步骤</span></label>
+            <label><input type="checkbox" name="category" value="pitfall" checked><span>! 易错提醒</span></label>
+          </fieldset>
+          <fieldset class="density"><legend class="field-label">内容详细程度</legend><div class="segmented">
+            <label><input type="radio" name="density" value="compact"><span>精简</span></label>
+            <label><input type="radio" name="density" value="standard" checked><span>标准</span></label>
+            <label><input type="radio" name="density" value="detailed"><span>详细</span></label>
+          </div></fieldset>
+          <button class="generate-button" id="generate-button" type="submit"><span aria-hidden="true">✳</span> 生成我的 Cheatsheet <span aria-hidden="true">→</span></button>
+          <p class="local-note"><span aria-hidden="true">⌁</span> 文档在浏览器内处理，不上传到服务器</p>
+        </form>
+      </aside>
+      <div class="main-panel">
+        <section class="documents-panel" aria-labelledby="docs-heading">
+          <div class="docs-top"><div class="panel-heading"><span class="step-number">02</span><h2 id="docs-heading">添加学习资料</h2><span class="count-badge" id="doc-count">0</span></div><div class="tabs" role="tablist" aria-label="添加资料方式"><button role="tab" aria-selected="true" aria-controls="upload-pane" id="upload-tab" class="active">上传文件</button><button role="tab" aria-selected="false" aria-controls="paste-pane" id="paste-tab" tabindex="-1">粘贴文字</button></div></div>
+          <div id="upload-pane" role="tabpanel" aria-labelledby="upload-tab">
+            <label class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择或拖入学习资料">
+              <input id="file-input" type="file" accept=".pdf,.docx,.txt,.md,.markdown" multiple hidden>
+              <span class="upload-icon" aria-hidden="true">↥</span><div><strong>拖入讲义、笔记或复习资料</strong><p>或 <span>点击选择文件</span> · PDF / DOCX / TXT / MD</p></div><span class="upload-limit">最多 8 份<br>单份 ≤ 10 MB</span>
+            </label>
+          </div>
+          <div id="paste-pane" role="tabpanel" aria-labelledby="paste-tab" hidden>
+            <textarea id="paste-content" rows="4" maxlength="300000" aria-label="学习资料文字" placeholder="把课堂笔记、教材重点或复习资料粘贴在这里…"></textarea><div class="paste-actions"><input id="paste-name" maxlength="100" aria-label="资料名称" placeholder="资料名称（可选）"><button class="small-button" id="add-paste">添加资料 +</button></div>
+          </div>
+          <ul class="document-list" id="document-list" aria-label="已添加的资料"></ul>
+          <p class="empty-documents" id="empty-documents">资料越清楚，重点越准确。扫描 PDF 请先转成文字。</p>
+        </section>
+        <section class="preview-section" aria-labelledby="preview-heading">
+          <div class="preview-toolbar"><div><div class="panel-heading"><span class="step-number">03</span><h2 id="preview-heading">你的 Cheatsheet</h2></div><p id="preview-status" class="preview-status">先添加资料，再生成你的复习速查表</p></div><div class="preview-actions"><button id="restore-button" class="icon-button" aria-label="恢复上次保存在本机的 Cheatsheet" title="恢复本机草稿">↶</button><button id="save-button" class="icon-button" aria-label="保存到本机" title="保存到本机" disabled>▣</button><button id="export-button" class="small-button" disabled>导出 Markdown</button><button id="print-button" class="small-button primary" disabled><span aria-hidden="true">↗</span> 打印 / PDF</button></div></div>
+          <div id="sheet-messages" class="sheet-messages" aria-live="polite"></div>
+          <div class="paper-settings" id="paper-settings" hidden><span><span class="live-dot"></span> 可编辑 · 点击条目右上角的笔</span><label>排版 <select id="columns" aria-label="Cheatsheet 栏数"><option value="2">双栏</option><option value="3">三栏</option><option value="1">单栏</option></select></label></div>
+          <article class="paper" id="paper"><div class="empty-state" id="empty-preview"><div class="empty-sheet" aria-hidden="true"><span>YOUR<br>CHEAT<br>SHEET.</span><i></i><i></i><i></i><em>✳</em></div><h3>你的下一张复习神器，从这里开始</h3><p>添加资料，告诉我们复习重点。<br>也可以先试试概率论示例，看看成品。</p><button class="small-button" id="empty-sample">试用示例 →</button></div></article>
+          <p class="preview-footnote">保留原文中的公式与条件。复杂公式、表格和图片内容请对照原文核验；打印页数取决于内容与纸张设置。</p>
+        </section>
+      </div>
+    </div>
+    <footer class="footer"><span>sheetwise<span class="footer-dot">·</span> MAKE ROOM FOR WHAT MATTERS.</span><span>从资料到理解，还差你的那一步。</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <dialog id="source-dialog"><div class="dialog-top"><h2>核对原文出处</h2><button class="icon-button" id="close-source" aria-label="关闭出处">×</button></div><div id="source-content"></div><p class="dialog-note">已编辑的条目可能与原文不同。PDF 行号指提取后的文本行，页码为原文件页码。</p></dialog>
+  <dialog id="help-dialog"><div class="dialog-top"><h2>三步，整理出你的重点</h2><button class="icon-button" id="close-help" aria-label="关闭使用说明">×</button></div><ol class="help-steps"><li><strong>填写复习目标</strong><p>写下考试范围、薄弱点和想保留的内容。需要严格限定范围时，填写关键词并选择“只保留匹配关键词”。</p></li><li><strong>添加学习资料</strong><p>支持文字版 PDF、DOCX、TXT、Markdown，也可以粘贴文字。扫描文件需要先 OCR；图片、表格结构与复杂公式暂不完整支持。</p></li><li><strong>生成、核验、带走</strong><p>按内容类型与目标提炼原文。点击出处查看原句，可编辑或删除条目。导出 Markdown，或通过打印对话框另存为 PDF。</p></li></ol><div class="help-note"><strong>关于第一版</strong><p>使用原文提取、关键词排序与规则分类，没有接入 AI 改写。不会生成资料之外的知识点。请在考试前核对公式和使用条件。</p></div><p class="dialog-note">文件只在当前浏览器处理。点击“保存到本机”会保存生成结果和引用原句；原始文件不会保存。</p></dialog>
+</body>
+</html>

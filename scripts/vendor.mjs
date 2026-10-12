@@ -1,0 +1,10 @@
+import { mkdir, copyFile, cp } from 'node:fs/promises';
+await mkdir('dist/vendor', { recursive: true });
+await copyFile('node_modules/pdfjs-dist/build/pdf.mjs', 'dist/vendor/pdf.mjs');
+await copyFile('node_modules/pdfjs-dist/build/pdf.worker.mjs', 'dist/vendor/pdf.worker.mjs');
+await cp('node_modules/pdfjs-dist/cmaps', 'dist/vendor/cmaps', { recursive: true });
+await cp('node_modules/pdfjs-dist/standard_fonts', 'dist/vendor/standard_fonts', { recursive: true });
+await copyFile('node_modules/pdfjs-dist/LICENSE', 'dist/vendor/pdfjs-LICENSE');
+await copyFile('node_modules/mammoth/mammoth.browser.min.js', 'dist/vendor/mammoth.browser.min.js');
+await copyFile('node_modules/mammoth/LICENSE', 'dist/vendor/mammoth-LICENSE');
+console.log('Document parsers vendored; no CDN required.');

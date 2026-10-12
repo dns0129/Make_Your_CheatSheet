@@ -1,0 +1,68 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { JSDOM } from 'jsdom';
+
+test('authoring controls generate, edit, cite, save, restore, filter and safely render pasted notes', async () => {
+  const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://sheetwise.test/' });
+  const { window } = dom;
+  globalThis.document = window.document;
+  globalThis.window = window;
+  globalThis.FormData = window.FormData;
+  globalThis.localStorage = window.localStorage;
+  globalThis.confirm = () => true;
+  window.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+  window.HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+  const $ = id => document.getElementById(id);
+  await import('../dist/app.mjs');
+  $('settings-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+  assert.match($('toast').textContent, /上传文档/);
+  $('sample-button').click();
+  assert.ok(document.querySelectorAll('.sheet-card').length > 10);
+  assert.equal(document.querySelectorAll('.sheet-category').length, 4);
+  assert.equal($('doc-count').textContent, '2');
+  document.querySelector('.card-source').click();
+  assert.ok($('source-dialog').hasAttribute('open'));
+  assert.ok($('source-content').textContent.length > 20);
+  $('close-source').click();
+
+  document.querySelector('.card-actions button').click();
+  const editor = document.querySelector('.card-editor');
+  editor.querySelector('input').value = '我的重点';
+  editor.querySelector('textarea').value = 'Var(X²) <img src=x onerror=alert(1)>：请保留平方。';
+  editor.dispatchEvent(new window.Event('submit', { cancelable: true }));
+  assert.ok($('paper').textContent.includes('Var(X²) <img'));
+  assert.equal($('paper').querySelectorAll('img').length, 0);
+  assert.ok(document.querySelector('.edited-label'));
+  $('save-button').click();
+  assert.ok(localStorage.getItem('sheetwise-draft-v1').includes('Var(X²)'));
+  $('sample-button').click();
+  assert.equal(document.querySelectorAll('.edited-label').length, 0);
+  $('restore-button').click();
+  assert.ok($('paper').textContent.includes('Var(X²)'));
+  assert.match($('preview-status').textContent, /已恢复/);
+
+  $('scope').value = 'focused'; $('keywords').value = '贝叶斯';
+  $('settings-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+  const focused = [...document.querySelectorAll('.sheet-card')];
+  assert.ok(focused.length > 0);
+  assert.ok(focused.every(x => x.querySelector('.card-heading').textContent.includes('贝叶斯') || x.querySelector('.card-body').textContent.includes('贝叶斯')));
+  $('keywords').value = '不存在的知识点';
+  $('settings-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+  assert.match($('toast').textContent, /未找到匹配/);
+  assert.equal(document.querySelectorAll('.sheet-card').length, focused.length);
+
+  $('paste-tab').click();
+  assert.equal($('paste-pane').hidden, false);
+  $('paste-content').value = '# 注入测试\n注入知识：<script>alert(1)</script> 是作为原文展示的测试内容。';
+  $('paste-name').value = '<img src=x>.md';
+  $('add-paste').click();
+  assert.equal($('doc-count').textContent, '3');
+  $('keywords').value = '注入';
+  $('settings-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+  assert.ok($('paper').textContent.includes('<script>alert(1)</script>'));
+  assert.equal($('paper').querySelectorAll('script,img').length, 0);
+  assert.equal($('document-list').querySelectorAll('img').length, 0);
+  dom.window.close();
+});
